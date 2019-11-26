@@ -1,0 +1,6 @@
+Images/
+*.dat
+*.o
+*.code-workspace
+*.json
+*.raw
