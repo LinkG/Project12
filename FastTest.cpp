@@ -4,16 +4,16 @@
 #include "FastSave.H"
 #include <random>
 
-#define layer_size 3
-#define layer_topology {117, 43, 10}
-#define alpha 0.1
+#define layer_size 5
+#define layer_topology {100, 100, 30, 40, 10}
+#define alpha 0.5
 
 #define num_layers NetworkFast::num_layers
 
 #define p(x) std::cout << x;
 #define prnt(x) std::cout << x << '\n';
 
-void shuffleImagesAndLabels(float** &images, int* &labels, int size) {
+void shuffleImagesAndLabels(float** &images, char* &labels, int size) {
     float swap1[784];
     int swap2;
     int k = size / 2;
@@ -59,28 +59,28 @@ void randomWeightAndBias(NetworkFast &net) {
     }
 }
 
-void inferNetwork(float** images, int* labels, NetworkFast &net, int &size, int l = -1) {
+void inferNetwork(float** images, char* labels, NetworkFast &net, int &size,  NetworkPreferences &np, int l = -1) {
     int guessed;
     int correct = 0, checked = 0;
     if(size == 1) {
         guessed = net.inferCorrect(images[0]);
         display(images[0]);
         p("Guessed ");
-        prnt(guessed);
+        prnt(np.getSymbol(guessed));
         return;
     }
     for(int q = 0; q < size; q++) {
         if(labels[q] == l || l == -1) {
             guessed = net.inferCorrect(images[q]);
             checked++;
-            if(guessed == labels[q]) {
+            if(np.getSymbol(guessed) == labels[q]) {
                 correct++;
             } else {
                 display(images[q]);
                 p("It is ")
                 p(labels[q]);
                 p(" guessed ");
-                prnt(guessed);
+                prnt(np.getSymbol(guessed));
             }
             prnt(float(correct) / checked);
         }
@@ -90,14 +90,17 @@ void inferNetwork(float** images, int* labels, NetworkFast &net, int &size, int 
 int main(int argc, char* argv[]) {
     srand(time(0));
     if(argc < 3) {
-        prnt("Missing argument/s");
+        prnt("Missing argument/s, usage:\n./<executable> <savefile-name> <train/infer> <o(overwrite)/1-9(infer)>");
         return 0;
     }
-    NetworkFast net(layer_size, layer_topology);
+
+    NetworkPreferences np("0123456789", layer_topology, layer_size);
+
+    NetworkFast net(np);
     MNISTData data("Images/images-ubyte", "Images/labels-ubyte");
     int num_img, size;
     float** images = data.getImages(num_img, size);
-    int* label = data.getLabels(size);
+    char* label = data.getLabels(size);
     char filename[100];
     strcpy(filename, argv[1]);
     Save svfile(filename);
@@ -125,6 +128,7 @@ int main(int argc, char* argv[]) {
             if(match && tolower(argv[3][0]) == 'o') {
                 prnt("Overwriting..");
                 randomWeightAndBias(net);
+                svfile.SaveToFile(net);
             }
         } else {
             prnt("Successfully read/created from file..");
@@ -138,7 +142,7 @@ int main(int argc, char* argv[]) {
             prnt("Successfully read from file..");
         }
         if(argc == 3) {
-            inferNetwork(images, label, net, size);
+            inferNetwork(images, label, net, size, np);
         } else if(isalpha(argv[3][0])) {
             std::ifstream file(argv[3]);
             size = 1;
@@ -149,16 +153,29 @@ int main(int argc, char* argv[]) {
             }
             file.close();
             float outputs[10];
+            display(images[0]);
             net.infer(images[0], outputs);
+            float sum = 0;
+            for(int i = 1; i < 10; i++) {
+                sum += outputs[i];
+            }
             p("[");
-            p(outputs[0]);
+            int index = 0;
+            float max = outputs[0];
+            p(outputs[0] * 100 / sum);
             for(int i = 1; i < 10; i++) {
                 p(",");
-                p(outputs[i]);
+                p(outputs[i] * 100 / sum);
+                if(outputs[i] > max) {
+                    max = outputs[i];
+                    index = i;
+                }
             }
             prnt("]");
+            p("Max activation: ");
+            prnt(index);
         } else {
-            inferNetwork(images, label, net, size, atoi(argv[3]));
+            inferNetwork(images, label, net, size, np, atoi(argv[3]));
         }
         return 1;
     }
@@ -167,7 +184,7 @@ int main(int argc, char* argv[]) {
     int epoch;
     std::cin >> epoch;
     for(int i = 0; i < epoch ; i++) {
-        net.descent(alpha, images, label, 50000);
+        net.descent(alpha, images, label, 50000, np);
         shuffleImagesAndLabels(images, label, size);
         prnt(i);
         svfile.SaveToFile(net);

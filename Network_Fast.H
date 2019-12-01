@@ -3,6 +3,7 @@
 
 #include <string.h>
 #include <iostream>
+#include "NetworkPref.H"
 #include <math.h>
 
 class NetworkFast {
@@ -16,19 +17,19 @@ public:
     float avg_cost;
     int prev_epoch;
     //------------------------
-    NetworkFast(int size, const int (&t)[]);
+    NetworkFast(NetworkPreferences &prefs);
     float sigmoid(float x);
     float sigmoidprime(float x);
-    void backpropagate(float in[], int correctvals[10]);
-    void descent(float, float **d, int*, int);
-    void infer(float in[784], float o[10]);
-    int inferCorrect(float in[784]);
+    void backpropagate(float in[], int correctvals[]);
+    void descent(float, float **d, char*, int, NetworkPreferences &np);
+    void infer(float in[], float o[]);
+    int inferCorrect(float in[]);
     void setLayer(float*, float**, int);
     int getSize(int x) { return sizes[x]; }
     int numLayers() { return num_layers; }
     float*** getWeightPointer();
     float** getBiasPointer();
-    void feedforward(float in[784]);
+    void feedforward(float in[]);
     float getcost(){return avg_cost;};
     ~NetworkFast();
 };

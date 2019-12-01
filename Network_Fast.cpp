@@ -3,12 +3,12 @@
 
 int NetworkFast::num_layers = 0;
 
-NetworkFast::NetworkFast(int size, const int (&topo)[]) {
-    num_layers = size;
+NetworkFast::NetworkFast(NetworkPreferences &prefs) {
+    num_layers = prefs.numLayers;
     sizes = new int[num_layers + 1];
-    sizes[0] = 768;
+    sizes[0] = 784;
     for(i = 1; i <= num_layers; i++) {
-        sizes[i] = topo[i - 1];
+        sizes[i] = prefs.layers[i - 1];
     }
     bias = new float*[num_layers];
     activations = new float*[num_layers];
@@ -27,7 +27,7 @@ NetworkFast::NetworkFast(int size, const int (&topo)[]) {
     }
 }
 
-void NetworkFast::backpropagate(float in[784], int corr[10]) {
+void NetworkFast::backpropagate(float in[], int corr[]) {
     float sum;
     float *z_vals[num_layers];
 
@@ -73,7 +73,7 @@ void NetworkFast::backpropagate(float in[784], int corr[10]) {
     }
 }
 
-void NetworkFast::descent(float alpha, float **data, int labels[], int s) {
+void NetworkFast::descent(float alpha, float **data, char labels[], int s, NetworkPreferences &np) {
     float *averageBias[num_layers];
     float **averageWeight[num_layers];
     for(k = 0; k < num_layers; k++) {
@@ -86,17 +86,18 @@ void NetworkFast::descent(float alpha, float **data, int labels[], int s) {
         }
     }
     int batches, mini, progress = 0;
-    int correct[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    int *correct = new int[np.num_activations];
+    memset(correct, 0, sizeof(int) * np.num_activations);
     float stepsize;
     int loop_len = s / 8;
     for(batches = 0; batches < loop_len; batches++) {
-        //stepsize = (alpha + exp(-(prev_epoch + ((batches + 1) / 6250)) / 5)) / 8.0;
+    //stepsize = (alpha + exp(-(prev_epoch + ((batches + 1) / 6250)) / 5)) / 8.0;
 	stepsize = (alpha) / 8.0;
         for(mini = 0; mini < 8; mini++) {
             int sample_no = (batches * 8) + mini;
-            if(labels[sample_no] > 0) {
-                correct[labels[sample_no]] = 1;
-            }
+            //There was a TF here
+            correct[np.getNumber(labels[sample_no])] = 1;
+
             backpropagate(data[sample_no], correct);
 
             for(k = 0; k < num_layers; k++) {
@@ -111,10 +112,8 @@ void NetworkFast::descent(float alpha, float **data, int labels[], int s) {
                     }
                 }
             }
-
-            if(labels[sample_no] > 0) {
-                correct[labels[sample_no]] = 0;
-            }
+            //TF here to
+            correct[np.getNumber(labels[sample_no])] = 0;
         }
         for(k = 0; k < num_layers; k++) {
             for(i = 0; i < sizes[k + 1]; i++) {
@@ -134,7 +133,7 @@ void NetworkFast::descent(float alpha, float **data, int labels[], int s) {
     prev_epoch++;
 }
 
-void NetworkFast::feedforward(float in[784]) {
+void NetworkFast::feedforward(float in[]) {
     float sum;
     for(k = 0; k < num_layers; k++) {
         for(i = 0; i < sizes[k + 1]; i++) {
@@ -152,7 +151,7 @@ void NetworkFast::feedforward(float in[784]) {
     }
 }
 
-void NetworkFast::infer(float in[784], float o[10]) {
+void NetworkFast::infer(float in[], float o[]) {
     feedforward(in);
 
     for(i = 0; i < sizes[num_layers]; i++) {

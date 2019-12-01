@@ -4,3 +4,7 @@ Images/
 *.code-workspace
 *.json
 *.raw
+ClassTester
+ClassTester.cpp
+FastTest
+.gitignore
