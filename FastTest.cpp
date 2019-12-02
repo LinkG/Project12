@@ -5,7 +5,7 @@
 #include <random>
 
 #define layer_size 5
-#define layer_topology {100, 100, 30, 40, 10}
+#define layer_topology {50, 100, 50, 100, 10}
 #define alpha 0.5
 
 #define num_layers NetworkFast::num_layers
@@ -97,10 +97,10 @@ int main(int argc, char* argv[]) {
     NetworkPreferences np("0123456789", layer_topology, layer_size);
 
     NetworkFast net(np);
-    MNISTData data("Images/images-ubyte", "Images/labels-ubyte");
-    int num_img, size;
-    float** images = data.getImages(num_img, size);
-    char* label = data.getLabels(size);
+    int num_img = 3000, size;
+    MNISTData data("Images/images-ubyte", "Images/labels-ubyte", num_img);
+    float** images = data.getImages(size); //From MNIST
+    char* label = data.getLabels();
     char filename[100];
     strcpy(filename, argv[1]);
     Save svfile(filename);
@@ -184,15 +184,15 @@ int main(int argc, char* argv[]) {
     int epoch;
     std::cin >> epoch;
     for(int i = 0; i < epoch ; i++) {
-        net.descent(alpha, images, label, 50000, np);
-        shuffleImagesAndLabels(images, label, size);
+        net.descent(alpha, images, label, num_img, np);
+        shuffleImagesAndLabels(images, label, num_img);
         prnt(i);
         svfile.SaveToFile(net);
     }
     prnt("----");
     float outs[10];
-    display(images[17]);
-    net.infer(images[17], outs);
+    display(images[0]);
+    net.infer(images[0], outs);
     float max = outs[0];
     int index = 0;
     std::cout << "[" << outs[0];
