@@ -70,7 +70,7 @@ void inferNetwork(float** images, char* labels, NetworkFast &net, int &size,  Ne
         return;
     }
     for(int q = 0; q < size; q++) {
-        if(labels[q] == l || l == -1) {
+        if(np.getNumber(labels[q]) == l || l == -1) {
             guessed = net.inferCorrect(images[q]);
             checked++;
             if(np.getSymbol(guessed) == labels[q]) {
@@ -97,7 +97,7 @@ int main(int argc, char* argv[]) {
     NetworkPreferences np("0123456789", layer_topology, layer_size);
 
     NetworkFast net(np);
-    int num_img = 3000, size;
+    int num_img = 60000, size;
     MNISTData data("Images/images-ubyte", "Images/labels-ubyte", num_img);
     float** images = data.getImages(size); //From MNIST
     char* label = data.getLabels();
@@ -142,7 +142,7 @@ int main(int argc, char* argv[]) {
             prnt("Successfully read from file..");
         }
         if(argc == 3) {
-            inferNetwork(images, label, net, size, np);
+            inferNetwork(images, label, net, num_img, np);
         } else if(isalpha(argv[3][0])) {
             std::ifstream file(argv[3]);
             size = 1;
@@ -175,7 +175,9 @@ int main(int argc, char* argv[]) {
             p("Max activation: ");
             prnt(index);
         } else {
-            inferNetwork(images, label, net, size, np, atoi(argv[3]));
+            int x = atoi(argv[3]);
+            prnt(x);
+            inferNetwork(images, label, net, num_img, np, x);
         }
         return 1;
     }
