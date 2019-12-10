@@ -4,8 +4,6 @@
 #include "FastSave.H"
 #include <random>
 
-#define layer_size 5
-#define layer_topology {50, 100, 50, 100, 10}
 #define alpha 0.5
 
 #define num_layers NetworkFast::num_layers
@@ -31,7 +29,7 @@ void shuffleImagesAndLabels(float** &images, char* &labels, int size) {
 void display(float number[784]) {
     for(int i1 = 0; i1 < 28; i1++) {
         for(int j1 = 0; j1 < 28; j1++) {
-            std::cout << (number[i1*28 + j1] == 1 ? 'o' : '.') << ' ';
+            std::cout << (number[i1*28 + j1] == 1 ? 'o' : ' ') << ' ';
         }
         std::cout << '\n';
     }
@@ -59,14 +57,28 @@ void randomWeightAndBias(NetworkFast &net) {
     }
 }
 
-void inferNetwork(float** images, char* labels, NetworkFast &net, int &size,  NetworkPreferences &np, int l = -1) {
+void inferNetwork(float** images, char* labels, NetworkFast &net, int size,  NetworkPreferences &np, int l = -1) {
     int guessed;
     int correct = 0, checked = 0;
     if(size == 1) {
         guessed = net.inferCorrect(images[0]);
         display(images[0]);
         p("Guessed ");
+        float activations[10];
+        net.infer(images[0], activations);
         prnt(np.getSymbol(guessed));
+        prnt("Percentages: ");
+        float sum = 0;
+        for(int i = 0; i < 10; i++) {
+            sum += activations[i];
+        }
+        for(int i = 0; i < 10; i++) {
+            p("=> ");
+            p(i);
+            p(" -> ");
+            p(activations[i] * 100 / sum);
+            prnt("%");
+        }
         return;
     }
     for(int q = 0; q < size; q++) {
@@ -90,98 +102,81 @@ void inferNetwork(float** images, char* labels, NetworkFast &net, int &size,  Ne
 int main(int argc, char* argv[]) {
     srand(time(0));
     if(argc < 3) {
-        prnt("Missing argument/s, usage:\n./<executable> <savefile-name> <train/infer> <o(overwrite)/1-9(infer)>");
+        prnt("Missing argument/s, usage:\n./<executable> <config-name> <train/infer> <o(overwrite)/1-9(infer)/imgfile(infer)>");
         return 0;
     }
 
-    NetworkPreferences np("0123456789", layer_topology, layer_size);
-
-    NetworkFast net(np);
+    NetworkPreferences np;
+    //num_img is the number of images to load from MNIST
     int num_img = 60000, size;
     MNISTData data("Images/images-ubyte", "Images/labels-ubyte", num_img);
     float** images = data.getImages(size); //From MNIST
     char* label = data.getLabels();
     char filename[100];
     strcpy(filename, argv[1]);
-    Save svfile(filename);
-    bool match;
-    bool new_file = false;
-    if(svfile.checkForFile()) {
-        match = svfile.ReadToNetwork(net);
-    } else {
-        new_file = true;
-    }
-    if(!strcasecmp("train", argv[2])) {
-        if(!match && argc == 3 && !new_file) {
-            prnt("Fix the network..");
-            return 0;
+    Save config(filename, true);
+    strcpy(filename, config.getPreferences(np));
+    Save svfile(filename, false);
+    NetworkFast net(np);
+
+    //MENU
+    if(!strcmp("infer", argv[2])) {
+        if(!svfile.checkForFile()) {
+            prnt("Cant infer from non-existant file, try changing config file.");
+            return -1;
         }
-        if(new_file) {
-            prnt("Creating new file");
-            randomWeightAndBias(net);
-        }
-        if(argc == 4 && !new_file) {
-            if(!match && tolower(argv[3][0]) == 'o') {
-                prnt("Failed to match, overwriting..");
-                randomWeightAndBias(net);
+        if(!svfile.ReadToNetwork(net)) {
+            prnt("Unable to match the save with current network config.");
+            p("The current configuration: ")
+            for(int i = 0; i < net.num_layers; i++) {
+                p(net.getSize(i + 1));
+                p(", ");
             }
-            if(match && tolower(argv[3][0]) == 'o') {
-                prnt("Overwriting..");
+            p("END\n");
+            return -1;
+        }
+        if(argc == 4) {
+            if(strlen(argv[3]) == 1 && argv[3][0] >= '0' && argv[3][0] <= '9') {
+                inferNetwork(images, label, net, num_img, np, atoi(argv[3]));
+            } else {
+                std::ifstream imgfile(argv[3], std::ios::in);
+                uchar tmp;
+                for(int i = 0; i < 784; i++) {
+                    imgfile.read((char*)&tmp, sizeof(uchar));
+                    images[0][i] = tmp ? 0 : 1;
+                }
+                inferNetwork(images, label, net, 1, np);
+                imgfile.close();
+            }
+        } else {
+            inferNetwork(images, label, net, num_img, np);
+        }
+        return 2;
+    } else if(!strcmp("train", argv[2])) {
+        if(!svfile.checkForFile()) {
+            prnt("Did not find a file, randomly initializing!");
+            randomWeightAndBias(net);
+        } else {
+            if(argc == 4 && (argv[3][0] == 'o' || argv[3][0] == 'O')) {
+                prnt("Ignoring the current saved configuration.");
                 randomWeightAndBias(net);
                 svfile.SaveToFile(net);
-            }
-        } else {
-            prnt("Successfully read/created from file..");
-        }
-    } else if(!strcasecmp("infer", argv[2])) {
-        if(!match) {
-            prnt("Fix the network..");
-            return 0;
-        }
-        if(match) {
-            prnt("Successfully read from file..");
-        }
-        if(argc == 3) {
-            inferNetwork(images, label, net, num_img, np);
-        } else if(isalpha(argv[3][0])) {
-            std::ifstream file(argv[3]);
-            size = 1;
-            uchar temp;
-            for(int i = 0; i < 784; i++) {
-                file.read((char*)&temp, sizeof(temp));
-                images[0][i] = !temp;
-            }
-            file.close();
-            float outputs[10];
-            display(images[0]);
-            net.infer(images[0], outputs);
-            float sum = 0;
-            for(int i = 1; i < 10; i++) {
-                sum += outputs[i];
-            }
-            p("[");
-            int index = 0;
-            float max = outputs[0];
-            p(outputs[0] * 100 / sum);
-            for(int i = 1; i < 10; i++) {
-                p(",");
-                p(outputs[i] * 100 / sum);
-                if(outputs[i] > max) {
-                    max = outputs[i];
-                    index = i;
+            } else {
+                prnt("Attempting to continue training.. ");
+                if(!svfile.ReadToNetwork(net)) {
+                    prnt("Unable to match the save with current network config.");
+                    p("The current configuration: ")
+                    for(int i = 0; i < net.num_layers; i++) {
+                        p(net.getSize(i + 1));
+                        p(", ");
+                    }
+                    p("END\n");
+                    return -1;
                 }
             }
-            prnt("]");
-            p("Max activation: ");
-            prnt(index);
-        } else {
-            int x = atoi(argv[3]);
-            prnt(x);
-            inferNetwork(images, label, net, num_img, np, x);
         }
-        return 1;
     }
-    svfile.SaveToFile(net);
+
     prnt("Epochs:")
     int epoch;
     std::cin >> epoch;

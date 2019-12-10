@@ -3,12 +3,41 @@
 #define p(x) std::cout << x
 #define pln(x) std::cout << x << '\n'
 
-Save::Save(const char* file) {
+Save::Save(const char* file, bool is) {
     fname = new char[strlen(file)];
     strcpy(fname, file);
+    isc = is;
 }
-
+char* Save::getPreferences(NetworkPreferences &np) {
+    if(!isc) {
+        pln("Bad bad");
+        return NULL;
+    }
+    char *fame = new char[100];
+    char data[50];
+    fileStream.open(fname, std::ios::in);
+    fileStream.getline(fame, 100, ',');
+    fileStream.getline(data, 50, ',');
+    if(np.numLayers != -1) {
+        delete[] np.outputLayer;
+    }
+    np.numLayers = std::atoi(data);
+    np.layers = new int[np.numLayers];
+    for(int i = 0; i < np.numLayers; i++) {
+        fileStream.getline(data, 50, ',');
+        np.layers[i] = std::atoi(data);
+    }
+    fileStream.getline(data,50);
+    np.outputLayer = new char[strlen(data)];
+    np.num_activations = strlen(data);
+    strcpy(np.outputLayer, data);
+    return fame;
+}
 void Save::SaveToFile(NetworkFast &net) {
+    if(isc) {
+        pln("Bad call");
+        return;
+    }
     fileStream.open(fname, std::ios::out | std::ios::binary);
     int holder = NetworkFast::num_layers;
     fileStream.write((char*)&holder, sizeof(holder));
@@ -32,7 +61,13 @@ void Save::SaveToFile(NetworkFast &net) {
     fileStream.close();
 }
 
+
+//Returns false if fails
 bool Save::ReadToNetwork(NetworkFast &net) {
+    if(isc) {
+        pln("Bad call");
+        return NULL;
+    }
     fileStream.open(fname, std::ios::in | std::ios::binary);
     int holder;
     fileStream.read((char*)&holder, sizeof(holder));
@@ -62,6 +97,7 @@ bool Save::ReadToNetwork(NetworkFast &net) {
     }
     pln("END");
     if(flag) {
+        pln("Error");
         return false;
     }
     float ***w_pointer = net.getWeightPointer();
@@ -84,6 +120,12 @@ bool Save::ReadToNetwork(NetworkFast &net) {
 bool Save::checkForFile() {
     struct stat buffer;   
     return (stat (fname, &buffer) == 0);
+}
+
+void Save::closeStream() {
+    if(fileStream.is_open()) {
+        fileStream.close();
+    }
 }
 
 Save::~Save() {
