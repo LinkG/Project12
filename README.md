@@ -6,7 +6,10 @@ PREREQUISITE: gcc/g++ 9. It wont work with newer versions as they have removed f
 Make sure to build ```Network_Fast.cpp``` you will need to include the rest of the files while building:
 
 ```
-g++
+ g++ FastTest.cpp FastSave.cpp Network_Fast.cpp MNISTRead.cpp NetworkPref.cpp -o <output-file-name>.o
+ 
+ ##Example
+ g++ FastTest.cpp FastSave.cpp Network_Fast.cpp MNISTRead.cpp NetworkPref.cpp -o COMPILE_PLS.o
 ```
 
 
