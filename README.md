@@ -1,6 +1,15 @@
 # Project12
 c++ neural network without 3rd party libraries
 
+PREREQUISITE: gcc/g++ 9. It wont work with newer versions as they have removed freedom of memory management in a specific case which is used.
+
+Make sure to build ```Network_Fast.cpp``` you will need to include the rest of the files while building:
+
+```
+g++
+```
+
+
 While running, you must pass an argument to a config file:
 ```
 ./<built-executable>.o <conf-file name>
