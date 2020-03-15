@@ -15,17 +15,6 @@ NetworkPreferences::NetworkPreferences(const char* outs, int *t, int nl) {
     }
 }
 
-NetworkPreferences::NetworkPreferences(const char* outs, int* a, int size) {
-    num_activations = strlen(outs);
-    outputLayer = new char[strlen(outs)];
-    strcpy(outputLayer, outs);
-    numLayers = size;
-    layers = new int[size];
-    for(int i = 0; i < size; i++) {
-        layers[i] = a[i];
-    }
-}
-
 NetworkPreferences::NetworkPreferences(char* outs) {
     num_activations = strlen(outs);
     outputLayer = new char[strlen(outs)];
