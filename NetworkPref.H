@@ -9,7 +9,6 @@ public:
     int* layers;
     NetworkPreferences();
     NetworkPreferences(const char* outs, int* t, int nl);
-    NetworkPreferences(const char* outs, int* arr, int);
     NetworkPreferences(char* outs);
     ~NetworkPreferences();
     int getNumber(char symbol);
